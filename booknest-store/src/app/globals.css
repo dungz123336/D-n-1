@@ -1,0 +1,360 @@
+@import "tailwindcss";
+@import "swiper/css";
+@import "swiper/css/pagination";
+@import "swiper/css/navigation";
+@import "swiper/css/autoplay";
+
+/* Dark luxury editorial — deep purple palette */
+:root {
+  --bg: #160726;
+  --bg-secondary: #23103a;
+  --surface: #2d174a;
+  --surface-elevated: rgba(45, 23, 74, 0.72);
+  --primary: #a855f7;
+  --secondary: #9333ea;
+  --highlight: #ec4899;
+  --text: #ffffff;
+  --text-secondary: #d1d5db;
+  --muted: #9ca3af;
+  --border: rgba(168, 85, 247, 0.18);
+  --glow: rgba(168, 85, 247, 0.35);
+  --card: rgba(45, 23, 74, 0.65);
+  --ring: rgba(168, 85, 247, 0.28);
+  --sale: #ec4899;
+  --green: #34d399;
+  --blue: #a855f7;
+  --accent: #ec4899;
+  --ink: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-ink: var(--text);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--highlight);
+  --color-highlight: var(--highlight);
+  --color-sale: var(--sale);
+  --color-bn-green: var(--green);
+  --color-bn-blue: var(--blue);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-text-secondary: var(--text-secondary);
+  --font-sans: "Times New Roman", Times, Georgia, "Noto Serif", serif;
+  --font-display: "Times New Roman", Times, Georgia, serif;
+  --font-serif: "Times New Roman", Times, Georgia, serif;
+  --radius-2xl: 1.5rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(1000px 600px at 15% -10%, rgba(168, 85, 247, 0.22), transparent 55%),
+    radial-gradient(800px 500px at 90% 5%, rgba(236, 72, 153, 0.12), transparent 50%),
+    radial-gradient(700px 400px at 50% 100%, rgba(147, 51, 234, 0.14), transparent 45%),
+    var(--bg);
+  color: var(--text);
+  font-family: "Times New Roman", Times, Georgia, "Noto Serif", serif;
+  min-height: 100vh;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+.font-serif {
+  font-family: "Times New Roman", Times, Georgia, serif;
+}
+
+::selection {
+  background: rgba(168, 85, 247, 0.4);
+  color: #fff;
+}
+
+/* Ambient orbs */
+.ambient {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.45;
+}
+.ambient-orb-1 {
+  width: 420px;
+  height: 420px;
+  top: -80px;
+  left: -60px;
+  background: #9333ea;
+}
+.ambient-orb-2 {
+  width: 360px;
+  height: 360px;
+  top: 20%;
+  right: -80px;
+  background: #ec4899;
+  opacity: 0.25;
+}
+.ambient-orb-3 {
+  width: 500px;
+  height: 500px;
+  bottom: -120px;
+  left: 30%;
+  background: #a855f7;
+  opacity: 0.18;
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+.glass {
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.glass-soft {
+  background: rgba(45, 23, 74, 0.45);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+}
+
+.section-title {
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.book-cover-frame {
+  isolation: isolate;
+}
+
+@keyframes voiceBar {
+  from { transform: scaleY(0.45); opacity: 0.6; }
+  to { transform: scaleY(1.25); opacity: 1; }
+}
+
+.section-kicker {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #a855f7 0%, #9333ea 50%, #ec4899 140%);
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 700;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  box-shadow: 0 0 0 0 transparent, 0 10px 30px rgba(168, 85, 247, 0.35);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 28px rgba(168, 85, 247, 0.55), 0 14px 36px rgba(147, 51, 234, 0.35);
+  filter: brightness(1.05);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(168, 85, 247, 0.18);
+  border-color: rgba(168, 85, 247, 0.45);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.25);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.nav-pill {
+  background: rgba(35, 16, 58, 0.72);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.input-dark {
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 7, 38, 0.55);
+  color: #fff;
+  padding: 0.7rem 1.1rem;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-dark::placeholder {
+  color: var(--muted);
+}
+
+.input-dark:focus {
+  border-color: rgba(168, 85, 247, 0.55);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+}
+
+.admin-input {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 7, 38, 0.65);
+  color: #fff;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+.admin-input:focus {
+  box-shadow: 0 0 0 3px var(--ring);
+  border-color: rgba(168, 85, 247, 0.45);
+}
+.admin-input option {
+  background: #23103a;
+  color: #fff;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.swiper-pagination-bullet {
+  background: rgba(255, 255, 255, 0.35) !important;
+  opacity: 1 !important;
+}
+.swiper-pagination-bullet-active {
+  background: #a855f7 !important;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.7);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+.float {
+  animation: float 5s ease-in-out infinite;
+}
+.float-delay {
+  animation: float 5.8s ease-in-out 0.7s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2.2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.25); }
+  50% { box-shadow: 0 0 36px rgba(168, 85, 247, 0.5); }
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Override common light assumptions */
+main a {
+  color: inherit;
+}
+
+/* —— Premium category cards (Apple / Linear feel) —— */
+.category-card {
+  min-height: 280px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 16px 40px rgba(0, 0, 0, 0.35);
+  transform: translateY(0) rotate(0deg);
+}
+
+.category-card:hover {
+  transform: translateY(-10px) rotate(-0.6deg);
+  border-color: rgba(168, 85, 247, 0.45);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 0 0 1px rgba(168, 85, 247, 0.25),
+    0 28px 60px rgba(88, 28, 135, 0.45),
+    0 0 40px rgba(168, 85, 247, 0.18);
+}
+
+.category-card:hover .cat-book-cover:nth-child(1) {
+  transform: translate(-4px, -8px) rotate(-18deg) scale(1.06);
+}
+.category-card:hover .cat-book-cover:nth-child(2) {
+  transform: translateY(-12px) rotate(0deg) scale(1.08);
+}
+.category-card:hover .cat-book-cover:nth-child(3) {
+  transform: translate(4px, -8px) rotate(18deg) scale(1.06);
+}
+
+/* Form controls default dark (tránh ô trắng trên theme tối) */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea,
+select {
+  background-color: rgba(22, 7, 38, 0.75);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+input:not([type="checkbox"]):not([type="radio"])::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(168, 85, 247, 0.55);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.18);
+}

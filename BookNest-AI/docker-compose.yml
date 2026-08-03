@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: booknest-concierge-api
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://booknest:booknest@db:5432/booknest_ai}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_ENABLED: "true"
+      PYTHONPATH: /app
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./frontend-widget:/app/frontend-widget
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: booknest-concierge-db
+    environment:
+      POSTGRES_USER: booknest
+      POSTGRES_PASSWORD: booknest
+      POSTGRES_DB: booknest_ai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booknest -d booknest_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: booknest-concierge-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

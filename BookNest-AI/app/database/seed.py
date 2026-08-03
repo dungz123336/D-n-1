@@ -1,0 +1,285 @@
+"""Seed demo catalog, coupons, and a sample customer for local development."""
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.author import Author
+from app.models.book import Book
+from app.models.coupon import Coupon
+from app.models.customer import Customer, CustomerMemory
+from app.utils.security import hash_password
+
+
+async def seed_if_empty(session: AsyncSession) -> None:
+    count = await session.scalar(select(func.count()).select_from(Book))
+    if count and count > 0:
+        return
+
+    authors_data = [
+        Author(
+            name="Haruki Murakami",
+            bio="Japanese novelist known for surreal, melancholic fiction.",
+            nationality="Japan",
+            genres="literary fiction, magical realism",
+        ),
+        Author(
+            name="Yuval Noah Harari",
+            bio="Historian and philosopher; author of Sapiens.",
+            nationality="Israel",
+            genres="history, science, non-fiction",
+        ),
+        Author(
+            name="James Clear",
+            bio="Writer on habits and continuous improvement.",
+            nationality="USA",
+            genres="self-help, productivity",
+        ),
+        Author(
+            name="Nguyễn Nhật Ánh",
+            bio="Beloved Vietnamese author of youth and coming-of-age stories.",
+            nationality="Vietnam",
+            genres="youth, fiction",
+        ),
+        Author(
+            name="Frank Herbert",
+            bio="Science fiction legend; creator of Dune.",
+            nationality="USA",
+            genres="science fiction",
+        ),
+        Author(
+            name="Agatha Christie",
+            bio="Queen of mystery novels.",
+            nationality="UK",
+            genres="mystery, crime",
+        ),
+    ]
+    session.add_all(authors_data)
+    await session.flush()
+
+    books = [
+        Book(
+            isbn="9780307476463",
+            barcode="9780307476463",
+            title="Kafka on the Shore",
+            description="A metaphysical odyssey of a teenage boy and an aging man.",
+            author_id=authors_data[0].id,
+            category="Fiction",
+            genres=["literary fiction", "magical realism"],
+            language="en",
+            format="paperback",
+            price=16.99,
+            original_price=19.99,
+            stock=42,
+            rating=4.5,
+            review_count=12040,
+            difficulty="intermediate",
+            target_reader="Adult literary readers",
+            page_count=505,
+            published_year=2002,
+            tags=["japan", "surreal", "classic"],
+        ),
+        Book(
+            isbn="9780062316097",
+            barcode="9780062316097",
+            title="Sapiens: A Brief History of Humankind",
+            description="A sweeping narrative of how Homo sapiens came to dominate the world.",
+            author_id=authors_data[1].id,
+            category="Non-Fiction",
+            genres=["history", "science"],
+            language="en",
+            format="paperback",
+            price=18.50,
+            original_price=22.00,
+            stock=80,
+            rating=4.6,
+            review_count=89000,
+            difficulty="intermediate",
+            target_reader="Curious general readers",
+            page_count=443,
+            published_year=2011,
+            tags=["history", "anthropology", "bestseller"],
+        ),
+        Book(
+            isbn="9780735211292",
+            barcode="9780735211292",
+            title="Atomic Habits",
+            description="Tiny changes, remarkable results — a practical guide to building better habits.",
+            author_id=authors_data[2].id,
+            category="Self-Help",
+            genres=["self-help", "productivity"],
+            language="en",
+            format="hardcover",
+            price=21.00,
+            original_price=27.00,
+            stock=120,
+            rating=4.8,
+            review_count=150000,
+            difficulty="beginner",
+            target_reader="Anyone building habits",
+            page_count=320,
+            published_year=2018,
+            tags=["habits", "productivity", "bestseller"],
+        ),
+        Book(
+            isbn="9786041234567",
+            barcode="9786041234567",
+            title="Mắt Biếc",
+            description="Câu chuyện tình tuổi học trò đầy day dứt và trong trẻo.",
+            author_id=authors_data[3].id,
+            category="Fiction",
+            genres=["youth", "romance"],
+            language="vi",
+            format="paperback",
+            price=8.50,
+            stock=200,
+            rating=4.7,
+            review_count=50000,
+            difficulty="beginner",
+            target_reader="Teen and young adult",
+            page_count=300,
+            published_year=1990,
+            tags=["vietnam", "classic", "youth"],
+        ),
+        Book(
+            isbn="9780441172719",
+            barcode="9780441172719",
+            title="Dune",
+            description="Epic saga of politics, religion, and ecology on the desert planet Arrakis.",
+            author_id=authors_data[4].id,
+            category="Science Fiction",
+            genres=["science fiction", "epic"],
+            language="en",
+            format="paperback",
+            price=12.99,
+            original_price=15.99,
+            stock=60,
+            rating=4.6,
+            review_count=200000,
+            difficulty="advanced",
+            target_reader="SF fans, epic fiction readers",
+            page_count=688,
+            published_year=1965,
+            tags=["classic", "space", "epic"],
+        ),
+        Book(
+            isbn="9780062073488",
+            barcode="9780062073488",
+            title="Murder on the Orient Express",
+            description="Hercule Poirot investigates a murder on a snowbound train.",
+            author_id=authors_data[5].id,
+            category="Mystery",
+            genres=["mystery", "crime"],
+            language="en",
+            format="paperback",
+            price=11.99,
+            stock=55,
+            rating=4.4,
+            review_count=95000,
+            difficulty="beginner",
+            target_reader="Mystery lovers",
+            page_count=274,
+            published_year=1934,
+            tags=["classic", "whodunit"],
+        ),
+        Book(
+            isbn="9780385474542",
+            barcode="9780385474542",
+            title="Norwegian Wood",
+            description="A nostalgic story of loss and sexuality in 1960s Tokyo.",
+            author_id=authors_data[0].id,
+            category="Fiction",
+            genres=["literary fiction", "romance"],
+            language="en",
+            format="ebook",
+            price=9.99,
+            stock=999,
+            rating=4.3,
+            review_count=40000,
+            difficulty="intermediate",
+            target_reader="Adult literary readers",
+            page_count=296,
+            published_year=1987,
+            tags=["japan", "coming-of-age"],
+        ),
+        Book(
+            isbn="9780062457732",
+            barcode="9780062457732",
+            title="Homo Deus",
+            description="A brief history of tomorrow — where humanity may be heading.",
+            author_id=authors_data[1].id,
+            category="Non-Fiction",
+            genres=["futurism", "science"],
+            language="en",
+            format="paperback",
+            price=17.99,
+            stock=40,
+            rating=4.4,
+            review_count=30000,
+            difficulty="intermediate",
+            target_reader="Readers of Sapiens",
+            page_count=449,
+            published_year=2015,
+            tags=["future", "technology"],
+        ),
+    ]
+    session.add_all(books)
+
+    coupons = [
+        Coupon(
+            code="WELCOME10",
+            description="10% off your first order",
+            discount_type="percent",
+            discount_value=10,
+            min_order=20,
+            max_discount=15,
+            usage_limit=10000,
+            is_active=True,
+        ),
+        Coupon(
+            code="BOOKNEST15",
+            description="$15 off orders over $50",
+            discount_type="fixed",
+            discount_value=15,
+            min_order=50,
+            usage_limit=5000,
+            is_active=True,
+        ),
+        Coupon(
+            code="READMORE20",
+            description="20% off for members",
+            discount_type="percent",
+            discount_value=20,
+            min_order=30,
+            max_discount=25,
+            usage_limit=2000,
+            is_active=True,
+        ),
+    ]
+    session.add_all(coupons)
+
+    customer = Customer(
+        external_id="demo-customer-1",
+        email="demo@booknest.ai",
+        name="Demo Reader",
+        membership_tier="gold",
+        language="en",
+        budget_preference=30.0,
+        hashed_password=hash_password("demo1234"),
+    )
+    session.add(customer)
+    await session.flush()
+
+    session.add(
+        CustomerMemory(
+            customer_id=customer.id,
+            favorite_genres=["literary fiction", "self-help"],
+            favorite_authors=["Haruki Murakami"],
+            reading_goals="Read 24 books this year",
+            budget=30.0,
+            preferred_format="paperback",
+            reading_level="intermediate",
+            language="en",
+            viewed_books=[],
+            search_history=[],
+        )
+    )
