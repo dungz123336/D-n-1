@@ -60,10 +60,13 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+_cors_origins = settings.cors_origin_list or ["*"]
+# Wildcard CORS can't be combined with credentials; drop credentials when embedding
+# the widget on arbitrary sites (CORS_ORIGINS=*).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origin_list or ["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials="*" not in _cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

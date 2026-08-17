@@ -1,0 +1,10 @@
+# ===== Claude Code — file máy riêng (KHÔNG commit) =====
+.claude/settings.local.json
+
+# ===== Windows =====
+desktop.ini
+Thumbs.db
+
+# ===== Logs / runtime =====
+*.log
+*.err.log

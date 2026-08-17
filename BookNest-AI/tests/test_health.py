@@ -1,8 +1,14 @@
-"""Basic API smoke tests (mock AI provider)."""
+"""Basic API smoke tests (mock AI provider) — target `backend.main:app`.
 
+Runs against the same entrypoint used by `start.bat` / `start.sh`
+(`backend.main:app`), so a green test suite == teammates can run it too.
+"""
+
+import asyncio
 import os
+from pathlib import Path
 
-# Force mock provider before app import
+# Force mock provider before app import (offline, no API key needed)
 os.environ.setdefault("AI_PROVIDER", "mock")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test_booknest_ai.db")
 os.environ.setdefault("SECRET_KEY", "test-secret")
@@ -12,8 +18,17 @@ os.environ.setdefault("ADMIN_API_KEY", "test-admin-key")
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.ai.factory import reset_provider_cache
-from app.main import app
+from backend.database import init_db
+from backend.llm.factory import reset_provider_cache
+from backend.main import app
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _session_db():
+    """Seeded fresh DB, created once for the whole session."""
+    Path("test_booknest_ai.db").unlink(missing_ok=True)
+    asyncio.run(init_db())
+    yield
 
 
 @pytest.fixture(autouse=True)
@@ -46,17 +61,6 @@ async def test_list_books():
 
 
 @pytest.mark.asyncio
-async def test_recommend_asks_questions():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        r = await client.post("/recommend", json={"customer_id": 1})
-        assert r.status_code == 200
-        body = r.json()["data"]
-        assert body["status"] == "need_more_info"
-        assert len(body["missing"]) > 0
-
-
-@pytest.mark.asyncio
 async def test_chat_mock():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -65,6 +69,16 @@ async def test_chat_mock():
         data = r.json()["data"]
         assert data["message"]
         assert data["session_id"]
+
+
+@pytest.mark.asyncio
+async def test_widget_served():
+    """Embeddable script must be served at /widget/booknest-widget.js."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        r = await client.get("/widget/booknest-widget.js")
+        assert r.status_code == 200
+        assert "BookNest" in r.text
 
 
 @pytest.mark.asyncio

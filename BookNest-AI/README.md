@@ -82,7 +82,7 @@ python -m venv .venv
 # source .venv/bin/activate
 
 pip install -r requirements.txt
-copy .env.example .env   # then set AI_PROVIDER + keys
+copy .env.example .env   # mặc định AI_PROVIDER=mock (offline); có key thì đổi provider + điền key
 
 # IMPORTANT: run from project root so `backend` package resolves
 set PYTHONPATH=%CD%          # Windows
@@ -91,17 +91,46 @@ set PYTHONPATH=%CD%          # Windows
 uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Or double-click **`start.bat`** on Windows.
+Or double-click **`start.bat`** on Windows, or run **`./start.sh`** on macOS/Linux. Both scripts
+auto-create the venv, install dependencies, copy `.env.example` → `.env` if missing, and start the server.
 
 | URL | Description |
 |-----|-------------|
 | http://127.0.0.1:8000/ui/chat | Premium widget UI |
+| http://127.0.0.1:8000/widget/booknest-widget.js | Embeddable widget script |
 | http://127.0.0.1:8000/docs | Swagger / OpenAPI |
 | http://127.0.0.1:8000/health | Health check |
 | http://127.0.0.1:8000/redoc | ReDoc |
 
 Demo user: `demo@booknest.ai` / `demo1234`  
 Demo vouchers: `WELCOME10`, `BOOKNEST15`, `READMORE20`
+
+---
+
+## Nhúng vào website bất kỳ (embeddable widget)
+
+Thả 1 dòng `<script>` vào bất kỳ website nào — widget tự hiện bong bóng chat (dùng Shadow DOM nên không xung đột CSS):
+
+```html
+<script src="http://<HOST>:8000/widget/booknest-widget.js"
+        data-api="http://<HOST>:8000"
+        data-theme="#7c3aed"></script>
+```
+
+| Tham số | Mặc định | Ý nghĩa |
+|---------|----------|---------|
+| `data-api` | — (bắt buộc) | URL backend |
+| `data-theme` | `#7c3aed` | Màu chủ đạo |
+| `data-position` | `right` | `right` / `left` |
+| `data-title` | `BookNest Concierge` | Tên bot |
+| `data-greeting` | … | Tin nhắn chào |
+| `data-language` | `vi` | `vi` / `en` |
+| `data-open` | `false` | Tự mở panel |
+
+Host page có thể truyền context qua `window.BookNestContext` (sản phẩm, giỏ, khách hàng…).
+Demo mẫu: `frontend-widget/embed-demo.html`.
+
+Để nhúng vào website thật, đặt `CORS_ORIGINS=*` trong `.env` (mặc định) và deploy backend lên host công khai, rồi thay `<HOST>` bằng domain backend.
 
 ---
 

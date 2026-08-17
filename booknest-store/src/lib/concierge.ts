@@ -1,4 +1,5 @@
 import type { Book } from "@/types";
+import { AI_BASE } from "@/lib/booknestAi";
 
 function money(n: number) {
   return new Intl.NumberFormat("vi-VN", {
@@ -183,7 +184,7 @@ export function answerFromCatalog(userMessage: string, books: Book[]): string {
   return `Mình chưa khớp đúng tựa sách trong câu hỏi.\nHiện shop có các thể loại: **${cats}**.\nThử hỏi kiểu:\n• "Gợi ý sách self-help dưới 150k"\n• "Tóm tắt Nhà giả kim"\n• "Giá Clean Code"\n• "Flash sale hôm nay"\n• "Ship bao lâu / freeship"`;
 }
 
-/** Gọi Flask BookNest AI (nếu server đang chạy) kèm context catalog. */
+/** Gọi BookNest-AI FastAPI (nếu server đang chạy) kèm context catalog. */
 export async function answerWithOptionalAI(
   userMessage: string,
   books: Book[],
@@ -191,31 +192,49 @@ export async function answerWithOptionalAI(
 ): Promise<{ reply: string; source: "local" | "ai" }> {
   const local = answerFromCatalog(userMessage, books);
 
-  // Context ngắn cho AI (giá realtime)
-  const catalogHint = books
-    .slice(0, 18)
-    .map((b) => `${b.id}|${b.title}|${b.author}|${b.category}|${b.salePrice}|stock:${b.stock}`)
-    .join("\n");
+  // Gửi snapshot catalog realtime để AI dùng đúng giá/tồn kho
+  const websiteInventory = books.slice(0, 18).map((b) => ({
+    id: b.id,
+    title: b.title,
+    author: b.author,
+    category: b.category,
+    sale_price: b.salePrice,
+    stock: b.stock,
+    rating: b.rating,
+  }));
+
+  const historyHint = history.length
+    ? `\n\nLỊCH SỬ HỘI THOẠI GẦN ĐÂY:\n${history
+        .slice(-8)
+        .map((h) => `${h.role === "user" ? "Khách" : "AI"}: ${h.content}`)
+        .join("\n")}`
+    : "";
 
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch("http://127.0.0.1:5000/chat", {
+    const res = await fetch(`${AI_BASE}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
         message:
-          `Bạn là BookNest Concierge trên website. Dùng ĐÚNG giá/tồn kho trong catalog dưới đây, không bịa.\n` +
-          `CATALOG:\n${catalogHint}\n\nKhách hỏi: ${userMessage}`,
-        history: history.slice(-8),
+          `Bạn là BookNest Concierge trên website. Dùng ĐÚNG giá/tồn kho trong context dưới đây, không bịa.\n` +
+          `Khách hỏi: ${userMessage}${historyHint}`,
+        language: "vi",
+        context: {
+          language: "vi",
+          website_inventory: websiteInventory,
+          inventory_source: "website",
+        },
       }),
     });
     clearTimeout(timer);
     if (!res.ok) return { reply: local, source: "local" };
     const data = await res.json();
-    if (data.reply && String(data.reply).trim()) {
-      return { reply: String(data.reply), source: "ai" };
+    const payload = data.data || data;
+    if (payload.message && String(payload.message).trim()) {
+      return { reply: String(payload.message), source: "ai" };
     }
   } catch {
     // AI offline → local

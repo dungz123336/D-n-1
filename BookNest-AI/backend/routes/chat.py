@@ -1,38 +1,21 @@
-"""Chat, streaming, history."""
+"""Chat history (GET /history).
 
-import json
+The main chat endpoints (POST /chat, /chat/stream, /chat/image, /chat/barcode,
+/chat/voice, /chat/history) live in `backend/routes/chatbot_api.py`. This router
+only keeps the legacy GET /history look-up so teammates never see ambiguous
+duplicate routes for the same path.
+"""
+
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
 from backend.memory.conversation import ConversationMemory
-from backend.schemas.chat import ChatRequest, ChatResponse
 from backend.schemas.common import APIResponse
-from backend.services.chat_service import ChatService
 
 router = APIRouter()
-
-
-@router.post("/chat", response_model=APIResponse[ChatResponse])
-async def chat(body: ChatRequest, db: AsyncSession = Depends(get_db)):
-    """Main concierge endpoint. Returns markdown message + optional book cards."""
-    result = await ChatService(db).chat(body)
-    return APIResponse(data=result)
-
-
-@router.post("/chat/stream")
-async def chat_stream(body: ChatRequest, db: AsyncSession = Depends(get_db)):
-    """SSE streaming for typing animation."""
-    service = ChatService(db)
-
-    async def events():
-        async for chunk in service.stream_chat(body):
-            yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
-
-    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 @router.get("/history")

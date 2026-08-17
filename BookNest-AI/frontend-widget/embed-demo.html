@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Demo nhúng BookNest AI Widget</title>
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #f5f4f0; color: #1f2937; }
+    header { padding: 28px 20px; background: #fff; border-bottom: 1px solid #eee; }
+    header h1 { margin: 0; font-size: 22px; }
+    header p { margin: 6px 0 0; color: #6b7280; }
+    main { max-width: 960px; margin: 24px auto; padding: 0 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+    .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+    .card .cover { height: 140px; border-radius: 10px; background: linear-gradient(135deg, #7c3aed, #c026d3); margin-bottom: 10px; }
+    .card b { font-size: 14px; }
+    .card .price { color: #c026d3; font-weight: 700; margin-top: 4px; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📚 Nhà sách demo</h1>
+    <p>Đây là trang web giả lập để kiểm tra <b>BookNest AI Widget</b> nhúng. Góc phải màn hình có bong bóng chat.</p>
+  </header>
+  <main>
+    <div class="grid">
+      <div class="card"><div class="cover"></div><b>Atomic Habits</b><div class="price">159.000đ</div></div>
+      <div class="card"><div class="cover"></div><b>Sapiens</b><div class="price">245.000đ</div></div>
+      <div class="card"><div class="cover"></div><b>Dune</b><div class="price">219.000đ</div></div>
+      <div class="card"><div class="cover"></div><b>Mắt Biếc</b><div class="price">85.000đ</div></div>
+    </div>
+    <p style="margin-top:24px;color:#6b7280;font-size:14px;">
+      Đoạn mã nhúng (copy vào website bất kỳ, đổi <code>data-api</code> theo host thật của backend):
+    </p>
+    <pre style="background:#1f2937;color:#e5e7eb;padding:14px;border-radius:10px;overflow:auto;font-size:12.5px;">
+&lt;script src="http://127.0.0.1:8000/widget/booknest-widget.js"
+        data-api="http://127.0.0.1:8000"
+        data-theme="#7c3aed"&gt;&lt;/script&gt;</pre>
+  </main>
+
+  <!-- Tùy chọn: cung cấp context sản phẩm/giỏ cho AI -->
+  <script>
+    window.BookNestContext = {
+      current_book: { id: 3, title: "Atomic Habits", author: "James Clear", price: 159000, stock: 120, rating: 4.8 },
+      membership: "gold"
+    };
+  </script>
+
+  <!-- Nhúng widget (dùng URL đầy đủ để mở được cả từ file:// lẫn khi server serve) -->
+  <script src="http://127.0.0.1:8000/widget/booknest-widget.js"
+          data-api="http://127.0.0.1:8000"
+          data-theme="#7c3aed"></script>
+</body>
+</html>
