@@ -88,30 +88,36 @@ class ChatService:
             out.append(row)
         return out
 
+    @staticmethod
+    def _strip_accents(text: str) -> str:
+        import unicodedata
+        return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
+
     def detect_intent(self, message: str) -> str:
         m = message.lower()
+        m_ascii = self._strip_accents(m)
         rules = [
-            (("lộ trình", "roadmap", "kế hoạch đọc", "30 ngày"), "roadmap"),
-            (("so sánh", "compare", "đối chiếu"), "compare"),
-            (("tóm tắt", "summary", "bài học chính", "spoiler"), "summary"),
-            (("quiz", "flashcard", "kiểm tra", "câu hỏi ôn"), "quiz"),
-            (("học ai", "machine learning", "deep learning", "prompt engineering"), "recommend"),
-            (("gợi ý", "recommend", "tư vấn sách", "quà", "làm quà", "gift"), "recommend"),
-            (("giỏ", "giỏ hàng", "thêm vào giỏ", "cart"), "cart"),
-            (("thanh toán", "checkout", "mua ngay", "cod", "momo", "vnpay", "zalopay"), "checkout"),
-            (("đơn hàng", "theo dõi", "tra cứu đơn", "giao hàng", "hủy đơn", "đổi địa chỉ"), "track_order"),
-            (("mã giảm", "voucher", "coupon", "ưu đãi", "flash sale", "combo"), "voucher"),
-            (("điểm thưởng", "loyalty", "hạng thành viên", "member"), "loyalty"),
-            (("hoàn tiền", "refund"), "refund"),
-            (("đổi trả", "đổi sách", "exchange", "return"), "exchange"),
-            (("yêu thích", "wishlist", "lưu sách"), "wishlist"),
-            (("barcode", "isbn", "quét mã", "mã vạch"), "barcode"),
-            (("chính sách", "faq", "vận chuyển", "ship"), "faq"),
-            (("tìm sách", "search", "sách dưới", "bán chạy", "sách mới"), "search"),
-            (("dưới 200", "dưới 300", "khoảng 200", "sách rẻ", "cao cấp", "ngân sách"), "budget"),
+            (("lộ trình", "lo trinh", "roadmap", "kế hoạch đọc", "ke hoach doc", "30 ngày", "30 ngay"), "roadmap"),
+            (("so sánh", "so sanh", "compare", "đối chiếu", "doi chieu"), "compare"),
+            (("tóm tắt", "tom tat", "summary", "bài học chính", "bai hoc chinh", "spoiler"), "summary"),
+            (("quiz", "flashcard", "kiểm tra", "kiem tra", "câu hỏi ôn", "cau hoi on"), "quiz"),
+            (("học ai", "hoc ai", "machine learning", "deep learning", "prompt engineering"), "recommend"),
+            (("gợi ý", "goi y", "recommend", "tư vấn sách", "tu van sach", "quà", "qua", "làm quà", "lam qua", "gift"), "recommend"),
+            (("giỏ", "gio", "giỏ hàng", "gio hang", "thêm vào giỏ", "them vao gio", "them gio", "add to cart", "cart"), "cart"),
+            (("thanh toán", "thanh toan", "checkout", "mua ngay", "cod", "momo", "vnpay", "zalopay"), "checkout"),
+            (("đơn hàng", "don hang", "theo dõi", "theo doi", "tra cứu đơn", "tra cuu don", "giao hàng", "giao hang", "hủy đơn", "huy don", "đổi địa chỉ", "doi dia chi"), "track_order"),
+            (("mã giảm", "ma giam", "voucher", "coupon", "ưu đãi", "uu dai", "flash sale", "combo"), "voucher"),
+            (("điểm thưởng", "diem thuong", "loyalty", "hạng thành viên", "hang thanh vien", "member"), "loyalty"),
+            (("hoàn tiền", "hoan tien", "refund"), "refund"),
+            (("đổi trả", "doi tra", "đổi sách", "doi sach", "exchange", "return"), "exchange"),
+            (("yêu thích", "yeu thich", "wishlist", "lưu sách", "luu sach"), "wishlist"),
+            (("barcode", "isbn", "quét mã", "quet ma", "mã vạch", "ma vach"), "barcode"),
+            (("chính sách", "chinh sach", "faq", "vận chuyển", "van chuyen", "ship"), "faq"),
+            (("tìm sách", "tim sach", "search", "sách dưới", "sach duoi", "bán chạy", "ban chay", "sách mới", "sach moi"), "search"),
+            (("dưới 200", "duoi 200", "dưới 300", "duoi 300", "khoảng 200", "khoang 200", "sách rẻ", "sach re", "cao cấp", "cao cap", "ngân sách", "ngan sach"), "budget"),
         ]
         for keys, intent in rules:
-            if any(k in m for k in keys):
+            if any(k in m or k in m_ascii for k in keys):
                 return intent
         return "general"
 
