@@ -266,12 +266,93 @@
 
   function removeTyping(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
 
+  function scrapeHostCatalog() {
+    const found = [];
+    const seen = new Set();
+    function pushItem(o) {
+      if (!o || !o.title) return;
+      const key = (o.title + "|" + (o.id||"")).toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      found.push(o);
+    }
+    try {
+      const ldNodes = document.querySelectorAll('script[type="application/ld+json"]');
+      ldNodes.forEach((n) => {
+        try {
+          const data = JSON.parse(n.textContent || "");
+          const arr = Array.isArray(data) ? data : [data];
+          arr.forEach((d) => {
+            const grap = d["@graph"] ? d["@graph"] : [d];
+            grap.forEach((g) => {
+              const t = (g["@type"]||"").toString().toLowerCase();
+              if (t.includes("book") || t.includes("product")) {
+                pushItem({
+                  id: g.sku || g.isbn || g.productID || g.url || g.name,
+                  title: g.name || g.title,
+                  author: (g.author && (g.author.name || g.author)) || g.brand && g.brand.name || "",
+                  price: g.offers && (g.offers.price || g.offers.lowPrice) || g.price || null,
+                  sale_price: g.offers && (g.offers.price || g.offers.lowPrice) || null,
+                  stock: g.offers && g.offers.availability && String(g.offers.availability).toLowerCase().includes("instock") ? 10 : undefined,
+                  rating: g.aggregateRating && g.aggregateRating.ratingValue || undefined,
+                  category: g.category || g.genre || "",
+                  language: "vi",
+                  slug: g.url || "",
+                });
+              }
+            });
+          });
+        } catch(e) {}
+      });
+    } catch(e) {}
+    try {
+      const candidates = document.querySelectorAll('[data-book-id],[data-product-id],.book-card,.product-card,.book-item,.product-item,.card[data-id],article[data-book]');
+      candidates.forEach((el) => {
+        const titleEl = el.querySelector('[data-title],.book-title,.product-title,.title,h3,h2,a[title]');
+        const priceEl = el.querySelector('[data-price],.price,.sale-price,.current-price');
+        const authorEl = el.querySelector('[data-author],.author,.book-author');
+        const title = (el.getAttribute('data-title') || (titleEl && titleEl.textContent) || el.getAttribute('title') || "").trim();
+        if (!title || title.length < 2) return;
+        let price = null;
+        if (el.getAttribute('data-price')) price = Number(el.getAttribute('data-price'));
+        else if (priceEl) {
+          const m = (priceEl.textContent||"").replace(/[^0-9]/g, "");
+          if (m) price = Number(m);
+        }
+        pushItem({
+          id: el.getAttribute('data-book-id') || el.getAttribute('data-product-id') || el.getAttribute('data-id') || title,
+          title: title,
+          author: (el.getAttribute('data-author') || (authorEl && authorEl.textContent) || "").trim(),
+          price: price,
+          sale_price: price,
+          stock: 10,
+          rating: Number(el.getAttribute('data-rating')||0) || undefined,
+          category: el.getAttribute('data-category')||"",
+          language: "vi",
+        });
+      });
+    } catch(e) {}
+    try {
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      const ogPrice = document.querySelector('meta[property="product:price:amount"],meta[property="og:price:amount"]');
+      if (ogTitle && ogTitle.content && found.length === 0) {
+        pushItem({ id: location.pathname, title: ogTitle.content.trim(), price: ogPrice ? Number(ogPrice.content) : null, stock: 10, language: "vi" });
+      }
+    } catch(e) {}
+    return found.slice(0, 60);
+  }
+
   function buildContext() {
+    const discovered = scrapeHostCatalog();
     const ctx = {
       language: cfg.language,
       current_page: typeof location !== "undefined" ? location.pathname : null,
+      website_inventory: discovered.length ? discovered : undefined,
       ...(window.BookNestContext || {}),
     };
+    if ((!ctx.website_inventory || !ctx.website_inventory.length) && discovered.length) {
+      ctx.website_inventory = discovered;
+    }
     return ctx;
   }
 

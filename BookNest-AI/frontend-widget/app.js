@@ -86,7 +86,8 @@
     el.statusLine.classList.toggle("thinking", thinking);
   }
   function money(n) {
-    const vnd = Math.round(Number(n) * 24000);
+    const raw = Number(n) || 0;
+    const vnd = raw > 1000 ? Math.round(raw) : Math.round(raw * 24000);
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(vnd);
   }
   function esc(s) {
@@ -321,10 +322,6 @@ Bạn muốn tìm sách về chủ đề nào hôm nay?</p>
       }
       addBubble("bot", payload.message || "…");
       if (payload.books && payload.books.length) renderBookCards(payload.books.slice(0, 5));
-      else if (shouldShowBooks(message) || shouldShowBooks(payload.message || "")) {
-        const books = await fetchBooksForCards(message.split(" ").slice(0, 4).join(" "));
-        renderBookCards(books.slice(0, 3));
-      }
       if (shouldShowOrder(message)) renderOrderCard();
       if (shouldShowVoucher(message)) {
         renderVoucherCard();

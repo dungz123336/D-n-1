@@ -195,7 +195,7 @@ app_js = r'''/* BookNest Concierge UI - tieng Viet */
     el.statusLine.classList.toggle("thinking", thinking);
   }
   function money(n) {
-    const vnd = Math.round(Number(n) * 24000);
+    const raw = Number(n) || 0; const vnd = raw > 1000 ? Math.round(raw) : Math.round(raw * 24000);
     return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(vnd);
   }
   function esc(s) {
