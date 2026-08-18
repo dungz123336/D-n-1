@@ -115,6 +115,67 @@ class ChatService:
                 return intent
         return "general"
 
+    def _build_actions(
+        self,
+        intent: str,
+        context: Optional[ChatContext],
+        session,
+    ) -> Optional[list]:
+        """Generic, website-agnostic commerce actions.
+
+        The SAME bot can then drive add-to-cart / voucher / checkout on ANY
+        bookstore website: the host site just wires its own handlers in the
+        widget via `window.BookNestActions` (see frontend-widget/booknest-widget.js).
+        Action shape: {type, label, ...fields}.
+        """
+        inv = (session.context or {}).get("website_inventory") or []
+        current: Optional[dict] = None
+        if context:
+            if isinstance(context.current_book, dict):
+                current = context.current_book
+            elif context.current_book_id is not None:
+                current = next(
+                    (b for b in inv if isinstance(b, dict) and b.get("id") == context.current_book_id),
+                    None,
+                )
+        if current is None and inv:
+            current = inv[0] if isinstance(inv[0], dict) else None
+
+        actions: list = []
+        if intent in ("cart", "search", "recommend", "budget") and current:
+            actions.append(
+                {
+                    "type": "add_to_cart",
+                    "book_id": current.get("id"),
+                    "title": current.get("title"),
+                    "qty": 1,
+                    "label": "Thêm vào giỏ",
+                }
+            )
+        if intent == "wishlist" and current:
+            actions.append(
+                {
+                    "type": "wishlist",
+                    "book_id": current.get("id"),
+                    "title": current.get("title"),
+                    "label": "Lưu vào yêu thích",
+                }
+            )
+        if intent in ("voucher", "checkout"):
+            code = None
+            if context and context.coupons:
+                first = context.coupons[0]
+                code = first if isinstance(first, str) else (first.get("code") if isinstance(first, dict) else None)
+            if code:
+                actions.append({"type": "apply_coupon", "code": code, "label": f"Áp mã {code}"})
+        if intent == "checkout":
+            actions.append({"type": "open_checkout", "label": "Đến thanh toán"})
+        if intent == "track_order":
+            actions.append({"type": "track_order", "label": "Xem đơn hàng"})
+        if intent == "barcode":
+            actions.append({"type": "open_scanner", "label": "Quét mã ISBN"})
+        return actions or None
+
     async def _build_messages(
         self,
         session,
@@ -443,6 +504,8 @@ class ChatService:
                 )
                 await self.db.flush()
 
+            actions = self._build_actions(intent, context, session)
+
             return ChatResponse(
                 session_id=session.session_key,
                 message=result.content,
@@ -468,9 +531,12 @@ class ChatService:
             )
             fallback = (
                 "Xin lỗi ✨\n\n"
-                "Hiện tại mình chưa lấy được dữ liệu.\n"
-                "Bạn thử lại sau ít phút nhé."
+                "Máy chủ AI đang bận hoặc hết hạn mức (quota/API key).\n"
+                "Bạn thử lại sau vài phút nhé."
             )
+            reason = str(exc).strip()
+            if reason:
+                fallback += f"\n\nChi tiết lỗi: {reason[:280]}"
             await self.conv.add_message(session, "assistant", fallback, intent="error")
             return ChatResponse(
                 session_id=session.session_key,

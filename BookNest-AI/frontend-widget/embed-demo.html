@@ -43,7 +43,39 @@
   <script>
     window.BookNestContext = {
       current_book: { id: 3, title: "Atomic Habits", author: "James Clear", price: 159000, stock: 120, rating: 4.8 },
+      coupons: ["WELCOME10", "BOOKNEST15"],
       membership: "gold"
+    };
+  </script>
+
+  <!--
+    ĐIỂM MẤU CHỐT để bot BÁN HÀNG trên website cụ thể của bạn:
+    website chủ đăng ký các hàm xử lý hành động. Khi AI trả về nút hành động
+    (add_to_cart / apply_coupon / open_checkout / track_order / wishlist ...),
+    widget gọi đúng hàm tương ứng ở đây — nên bot có thể thêm giỏ / áp voucher /
+    mở thanh toán NGAY trên web bán sách của bạn.
+  -->
+  <script>
+    window.BookNestActions = {
+      async add_to_cart(action) {
+        // Gọi API giỏ hàng THẬT của website bạn tại đây.
+        console.log("[Demo] add_to_cart", action);
+        return { ok: true, message: `Đã thêm "${action.title || "sách"}" vào giỏ hàng (demo).` };
+      },
+      async apply_coupon(action) {
+        console.log("[Demo] apply_coupon", action);
+        return { ok: true, message: `Đã áp dụng mã ${action.code} — giảm giá thêm (demo).` };
+      },
+      async open_checkout() {
+        console.log("[Demo] open_checkout");
+        return { ok: true, message: "Đã đưa bạn tới trang thanh toán (demo)." };
+      },
+      async track_order() {
+        return { ok: true, message: "Vui lòng xem phần “Đơn hàng của tôi” trên trang (demo)." };
+      },
+      async wishlist(action) {
+        return { ok: true, message: `Đã lưu "${action.title || "sách"}" vào danh sách yêu thích (demo).` };
+      },
     };
   </script>
 

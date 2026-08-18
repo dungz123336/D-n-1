@@ -16,6 +16,20 @@ from backend.llm.providers.openai_compatible import OpenAICompatibleProvider
 from backend.utils.logging import logger
 
 
+def _require_key(provider: str, key: str) -> None:
+    """No silent mock fallback: a real provider MUST have its API key.
+
+    This makes the assistant answer only with the real key that was configured.
+    To run offline (no key) you must explicitly set AI_PROVIDER=mock.
+    """
+    if not key:
+        raise ValueError(
+            f"AI_PROVIDER={provider} nhưng thiếu API key. "
+            f"Thêm {provider.upper()}_API_KEY vào .env để dùng AI thật, "
+            "hoặc đặt AI_PROVIDER=mock để chạy offline (không dùng API)."
+        )
+
+
 @lru_cache
 def get_llm_provider() -> BaseLLMProvider:
     s = get_settings()
@@ -25,9 +39,7 @@ def get_llm_provider() -> BaseLLMProvider:
     logger.info("AI provider=%s model=%s", provider, model)
 
     if provider == "openai":
-        if not s.openai_api_key:
-            logger.warning("OPENAI_API_KEY missing → mock")
-            return MockProvider(model="mock-1", temperature=temp, max_tokens=max_tok)
+        _require_key("openai", s.openai_api_key)
         return OpenAICompatibleProvider(
             name="openai",
             api_key=s.openai_api_key,
@@ -39,13 +51,10 @@ def get_llm_provider() -> BaseLLMProvider:
         )
 
     if provider in ("grok", "xai"):
-        key = s.grok_key
-        if not key:
-            logger.warning("GROK/XAI key missing → mock")
-            return MockProvider(model="mock-1", temperature=temp, max_tokens=max_tok)
+        _require_key("grok/xai", s.grok_key)
         return OpenAICompatibleProvider(
             name="grok",
-            api_key=key,
+            api_key=s.grok_key,
             base_url=s.grok_base_url,
             model=model,
             temperature=temp,
@@ -54,9 +63,7 @@ def get_llm_provider() -> BaseLLMProvider:
         )
 
     if provider == "deepseek":
-        if not s.deepseek_api_key:
-            logger.warning("DEEPSEEK_API_KEY missing → mock")
-            return MockProvider(model="mock-1", temperature=temp, max_tokens=max_tok)
+        _require_key("deepseek", s.deepseek_api_key)
         return OpenAICompatibleProvider(
             name="deepseek",
             api_key=s.deepseek_api_key,
@@ -68,9 +75,7 @@ def get_llm_provider() -> BaseLLMProvider:
         )
 
     if provider == "qwen":
-        if not s.qwen_api_key:
-            logger.warning("QWEN_API_KEY missing → mock")
-            return MockProvider(model="mock-1", temperature=temp, max_tokens=max_tok)
+        _require_key("qwen", s.qwen_api_key)
         return OpenAICompatibleProvider(
             name="qwen",
             api_key=s.qwen_api_key,
@@ -82,9 +87,7 @@ def get_llm_provider() -> BaseLLMProvider:
         )
 
     if provider == "openrouter":
-        if not s.openrouter_api_key:
-            logger.warning("OPENROUTER_API_KEY missing → mock")
-            return MockProvider(model="mock-1", temperature=temp, max_tokens=max_tok)
+        _require_key("openrouter", s.openrouter_api_key)
         return OpenAICompatibleProvider(
             name="openrouter",
             api_key=s.openrouter_api_key,
@@ -111,9 +114,7 @@ def get_llm_provider() -> BaseLLMProvider:
         )
 
     if provider in ("claude", "anthropic"):
-        if not s.claude_api_key:
-            logger.warning("CLAUDE_API_KEY missing → mock")
-            return MockProvider(model="mock-1", temperature=temp, max_tokens=max_tok)
+        _require_key("claude", s.claude_api_key)
         return ClaudeProvider(
             api_key=s.claude_api_key,
             model=model,
@@ -123,14 +124,13 @@ def get_llm_provider() -> BaseLLMProvider:
         )
 
     if provider in ("gemini", "google"):
-        if not s.gemini_api_key:
-            logger.warning("GEMINI_API_KEY missing → mock")
-            return MockProvider(model="mock-1", temperature=temp, max_tokens=max_tok)
+        _require_key("gemini", s.gemini_api_key)
         return GeminiProvider(
             api_key=s.gemini_api_key,
             model=model,
             temperature=temp,
             max_tokens=max_tok,
+            timeout=timeout,
         )
 
     if provider == "mock":

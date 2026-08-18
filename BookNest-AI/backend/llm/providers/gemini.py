@@ -11,9 +11,17 @@ from backend.utils.logging import logger
 class GeminiProvider(BaseLLMProvider):
     name = "gemini"
 
-    def __init__(self, api_key: str, model: str, temperature: float = 0.7, max_tokens: int = 2048):
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+        timeout: float = 90.0,
+    ):
         super().__init__(model=model, temperature=temperature, max_tokens=max_tokens)
         self.api_key = api_key
+        self.timeout = timeout
         self._ready = False
 
     def _ensure(self):
@@ -57,7 +65,10 @@ class GeminiProvider(BaseLLMProvider):
             return chat.send_message(history[-1]["parts"][0])
 
         try:
-            resp = await asyncio.to_thread(_run)
+            resp = await asyncio.wait_for(
+                asyncio.to_thread(_run),
+                timeout=self.timeout,
+            )
             latency = (time.perf_counter() - started) * 1000
             text = getattr(resp, "text", None) or ""
             um = getattr(resp, "usage_metadata", None)

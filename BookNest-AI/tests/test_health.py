@@ -82,6 +82,37 @@ async def test_widget_served():
 
 
 @pytest.mark.asyncio
+async def test_chat_returns_commerce_actions():
+    """Cart intent → generic action so any bookstore website can drive sales."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        r = await client.post(
+            "/chat",
+            json={
+                "message": "mình muốn thêm quyển này vào giỏ",
+                "language": "vi",
+                "context": {
+                    "current_book": {
+                        "id": 3,
+                        "title": "Atomic Habits",
+                        "stock": 120,
+                        "price": 159000,
+                        "sale_price": 159000,
+                    }
+                },
+            },
+        )
+        assert r.status_code == 200
+        data = r.json()["data"]
+        assert data["actions"], "expected commerce actions from cart intent"
+        types = [a["type"] for a in data["actions"]]
+        assert "add_to_cart" in types
+        # the action carries the website book id so the host site can act on it
+        cart = next(a for a in data["actions"] if a["type"] == "add_to_cart")
+        assert cart["book_id"] == 3
+
+
+@pytest.mark.asyncio
 async def test_admin_requires_key():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

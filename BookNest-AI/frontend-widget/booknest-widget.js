@@ -160,6 +160,14 @@
     padding: 0 14px; font-weight: 700; font-size: 13px;
   }
   .bn-send:disabled { opacity: .5; cursor: not-allowed; }
+  .bn-actions { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 8px; }
+  .bn-action {
+    border: 1px solid ${cfg.theme}55; background: ${cfg.theme}0d; color: ${cfg.theme};
+    font-size: 12px; padding: 7px 12px; border-radius: 999px; cursor: pointer; font-weight: 600;
+    transition: background .15s, transform .1s;
+  }
+  .bn-action:hover { background: ${cfg.theme}22; }
+  .bn-action:disabled { opacity: .55; cursor: not-allowed; }
 </style>
 
 <button class="bn-launcher" id="bnLauncher" type="button" title="${escapeAttr(cfg.title)}">
@@ -215,6 +223,20 @@
         return `<div class="bn-book"><div><b>${title}</b><br><span>${author}${price ? " · " + price : ""}</span></div></div>`;
       })
       .join("");
+  }
+
+  function renderActions(actions) {
+    if (!actions || !actions.length) return "";
+    return (
+      '<div class="bn-actions">' +
+      actions
+        .map(
+          (a, i) =>
+            `<button type="button" class="bn-action" data-act-i="${i}">${escapeHtml(a.label || a.type)}</button>`
+        )
+        .join("") +
+      "</div>"
+    );
   }
 
   function fmtMoney(n, currency) {
@@ -296,15 +318,61 @@
     try {
       const payload = await postChat(message);
       saveSession(payload.session_id);
-      const body = renderMarkdown(payload.message || "…") + renderBooks(payload.books);
+      const body =
+        renderMarkdown(payload.message || "…") + renderBooks(payload.books) + renderActions(payload.actions);
       removeTyping(typing);
-      addMsg("bot", body);
+      const el = addMsg("bot", body);
+      wireActions(el, payload.actions);
     } catch (err) {
       removeTyping(typing);
       addMsg("bot", "Xin lỗi, mình chưa kết nối được tới máy chủ AI.\n" + (err && err.message ? "(" + renderMarkdown(err.message) + ")" : ""));
     } finally {
       sendBtn.disabled = false;
       input.focus();
+    }
+  }
+
+  function wireActions(container, actions) {
+    if (!container || !actions || !actions.length) return;
+    container.querySelectorAll("[data-act-i]").forEach((btn) => {
+      const i = Number(btn.getAttribute("data-act-i"));
+      const action = actions[i];
+      if (!action) return;
+      btn.addEventListener("click", () => runAction(action));
+    });
+  }
+
+  async function runAction(action) {
+    const pageHandlers = window.BookNestActions || {};
+    const handler =
+      pageHandlers[action.type] ||
+      pageHandlers.default ||
+      (action.type === "navigate" && action.url
+        ? () => {
+            window.location.href = action.url;
+            return { ok: true };
+          }
+        : null);
+    if (!handler) {
+      addMsg(
+        "bot",
+        "⚠️ Website này chưa kết nối hành động “" +
+          escapeHtml(action.label || action.type) +
+          "”. Bạn hãy tự thao tác trên trang, hoặc nhờ mình hướng dẫn nhé."
+      );
+      return;
+    }
+    try {
+      const res = await handler(action);
+      const ok = !res || res.ok !== false;
+      addMsg(
+        "bot",
+        ok
+          ? "✅ " + (res && res.message ? res.message : "Đã thực hiện: " + (action.label || action.type))
+          : "⚠️ " + (res && res.message ? res.message : "Chưa thực hiện được hành động này.")
+      );
+    } catch (err) {
+      addMsg("bot", "⚠️ Lỗi khi thực hiện: " + (err && err.message ? err.message : "không xác định"));
     }
   }
 
