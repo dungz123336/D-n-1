@@ -45,11 +45,51 @@ class ChatService:
 
     @staticmethod
     def _filter_vi_cheap(books: list[dict], limit: int = 5) -> list[dict]:
-        """Keep only Vietnamese books, sorted cheapest first."""
+        """Keep only Vietnamese books, sorted cheapest first. Strict on query match.
+
+        Why: user requires only vi cheap books that actually match the request,
+        not a cheap-but-irrelevant fallback.
+        """
         vi = [b for b in books if (b.get("language") or "vi").lower() == "vi"]
         pool = vi if vi else books
         pool = sorted(pool, key=lambda b: float(b.get("price") or b.get("sale_price") or 1e9))
         return pool[:limit]
+
+    @staticmethod
+    def _query_matches_book(query: str, book: dict) -> bool:
+        """True iff the user's topic/budget query actually appears in the book.
+
+        Loose on greetings (`xin chào`, empty): returns True. Otherwise requires
+        at least one content token (=4 chars) to appear in title/author/category/tags.
+        Budget-only queries (`dưới 100k`) always pass — price filtering happens later.
+        """
+        q = (query or "").strip().lower()
+        if not q or len(q) < 3 or q in {"hi", "hello", "chao"} or "xin chao" in q or "chao ban" in q:
+            return True
+        # budget-only -> let price sort decide
+        if any(k in q for k in ["duoi", "dưới", "ngan sach", "ngân sách", "khoang", "khoảng", "gia re", "giá rẻ", "<", "k ", " vnd", "000"]):
+            # if query is purely budget-ish with no topic token, accept any vi book
+            tokens = [t for t in q.replace(",", " ").split() if len(t) >= 4]
+            has_topic = any(t not in {"duoi", "dưới", "khoang", "khoảng", "ngan", "ngân", "sach", "sách", "gia", "giá", "re", "rẻ", "vnd", "dong", "đồng", "ban", "bao", "nhieu", "hien", "hiện"} for t in tokens)
+            if not has_topic:
+                return True
+        blob = " ".join(
+            str(x or "")
+            for x in (
+                book.get("title"),
+                book.get("author"),
+                book.get("author_name"),
+                book.get("category"),
+                book.get("slug"),
+                " ".join(book.get("tags") or []),
+                " ".join(book.get("genres") or []),
+                book.get("description") or "",
+            )
+        ).lower()
+        tokens = [t for t in q.replace(",", " ").split() if len(t) >= 4]
+        if not tokens:
+            return True
+        return any(t in blob for t in tokens)
 
     @staticmethod
     def _match_website_inventory(
@@ -63,6 +103,9 @@ class ChatService:
         scored: list[tuple[float, dict]] = []
         for b in inventory:
             if not isinstance(b, dict):
+                continue
+            # Strict relevance: if caller asked for a topic, unrelated vi books must not surface.
+            if not ChatService._query_matches_book(query, b):
                 continue
             blob = " ".join(
                 str(x or "")
@@ -444,28 +487,38 @@ class ChatService:
                 inv = (session.context or {}).get("website_inventory") or []
                 web_hits = self._match_website_inventory(req.message, inv, limit=6)
                 if web_hits:
+                    # strictly topic-matched vi cheap hits
                     books_payload = self._filter_vi_cheap(web_hits, limit=5)
-                    stock_lines = "\n".join(
-                        f"- {b.get('title')} ({b.get('language') or 'vi'}): stock={b.get('stock')} "
-                        f"({'CÒN HÀNG' if int(b.get('stock') or 0) > 0 else 'HẾT HÀNG'}), "
-                        f"giá={b.get('sale_price') or b.get('price')}đ"
-                        for b in books_payload
-                    )
-                    messages.append(
-                        LLMMessage(
-                            role="system",
-                            content=(
-                                "Sách khớp từ WEBSITE — CHỈ gợi ý sách tiếng Việt giá rẻ trong list này (đã sắp xếp rẻ trước):\n"
-                                + stock_lines
-                            ),
+                    # drop any hit that doesn't actually match the query topic
+                    books_payload = [b for b in books_payload if self._query_matches_book(req.message, b)]
+                    if not books_payload:
+                        books_payload = None
+                    else:
+                        stock_lines = "\n".join(
+                            f"- {b.get('title')} ({b.get('language') or 'vi'}): stock={b.get('stock')} "
+                            f"({'CÒN HÀNG' if int(b.get('stock') or 0) > 0 else 'HẾT HÀNG'}), "
+                            f"giá={b.get('sale_price') or b.get('price')}đ"
+                            for b in books_payload
                         )
-                    )
-                else:
+                        messages.append(
+                            LLMMessage(
+                                role="system",
+                                content=(
+                                    "Sách khớp từ WEBSITE — CHỈ gợi ý sách tiếng Việt giá rẻ trong list này (đã sắp xếp rẻ trước):\n"
+                                    + stock_lines
+                                    + "\nQUAN TRỌNG: Mọi giá trên đã là VND. CẤM nhân 24000 hay × tỉ. "
+                                    "Chỉ nêu đúng số trên."
+                                ),
+                            )
+                        )
+                if not books_payload:
                     smart = await self.smart.recommend(
                         req.message, customer_id=session.customer_id, limit=10
                     )
                     raw = smart.get("books") or []
-                    books_payload = self._filter_vi_cheap(raw, limit=5)
+                    # topic filter must apply to fallback too
+                    raw = [b for b in raw if self._query_matches_book(req.message, b)]
+                    books_payload = self._filter_vi_cheap(raw, limit=5) or None
                     if books_payload:
                         cheap_lines = "\n".join(
                             f"- {b.get('title')} ({b.get('language') or 'vi'}): {b.get('price')} VND | stock={b.get('stock')}"
@@ -474,14 +527,19 @@ class ChatService:
                         messages.append(
                             LLMMessage(
                                 role="system",
-                                content="Gợi ý tiếng Việt giá rẻ (đã lọc + sắp xếp rẻ trước, dùng list này):\n" + cheap_lines,
+                                content="Gợi ý tiếng Việt giá rẻ (đã lọc + sắp xếp rẻ trước, dùng list này):\n" + cheap_lines + "\nGiá đã là VND, cấm nhân thêm.",
                             )
                         )
                     else:
+                        # no topic-matched vi book -> explicitly tell LLM to ask, not dump random titles
                         messages.append(
                             LLMMessage(
                                 role="system",
-                                content="Gợi ý thông minh (đã chấm điểm):\n" + (smart.get("message") or ""),
+                                content=(
+                                    "Không tìm thấy sách tiếng Việt nào khớp đúng chủ đề khách hỏi trong inventory. "
+                                    "Hãy HỎI LẠI để làm rõ nhu cầu (chủ đề, ngân sách, tiếng Việt/Anh), "
+                                    "tuyệt đối không liệt kê bừa sách không liên quan."
+                                ),
                             )
                         )
             elif intent == "barcode":

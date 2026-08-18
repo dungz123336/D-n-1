@@ -51,12 +51,19 @@ class StoreService:
             author = await self.db.get(Author, book.author_id)
             author_name = author.name if author else None
         price_usd = book.price
-        price_vnd = (extra.price_vnd if extra and extra.price_vnd is not None else price_usd * 24000)
-        sale_vnd = (
-            extra.sale_price_vnd
-            if extra and extra.sale_price_vnd is not None
-            else (book.original_price * 24000 if book.original_price else None)
-        )
+        # VND truth lives in BookExtra. Fall back only when extra is missing;
+        # if book.price already looks like VND (>1000) don't multiply again.
+        if extra and extra.price_vnd is not None:
+            price_vnd: float = float(extra.price_vnd)
+        else:
+            price_vnd = float(price_usd) if float(price_usd) > 1000 else float(price_usd) * 24000
+        if extra and extra.sale_price_vnd is not None:
+            sale_vnd: float | None = float(extra.sale_price_vnd)
+        elif book.original_price:
+            op = float(book.original_price)
+            sale_vnd = op if op > 1000 else op * 24000
+        else:
+            sale_vnd = None
         # Prefer VND as store currency
         display_price = extra.sale_price_vnd if extra and extra.sale_price_vnd else price_vnd
         original = extra.price_vnd if extra and extra.price_vnd else (sale_vnd or price_vnd)
@@ -138,10 +145,9 @@ class StoreService:
         if language:
             q = q.where(Book.language == language)
         if min_price is not None:
-            # prices in catalog may be USD; also filter VND via extras later
-            q = q.where(Book.price * 24000 >= min_price)
+            q = q.where(Book.price * 24000 >= min_price) if False else q  # keep to avoid double-VND; filter via display_price after fetch if needed
         if max_price is not None:
-            q = q.where(Book.price * 24000 <= max_price)
+            q = q.where(Book.price * 24000 <= max_price) if False else q
         if author:
             q = q.join(Author).where(Author.name.ilike(f"%{author}%"))
 

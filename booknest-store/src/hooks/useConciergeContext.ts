@@ -48,23 +48,34 @@ function loadOrders(): Array<Record<string, unknown>> {
 
 function loadCustomerId(): number | null {
   try {
+    const auth = localStorage.getItem("booknest-auth-v1");
+    if (auth) {
+      const p = JSON.parse(auth);
+      const u = p?.state?.user;
+      if (u?.id) return Number(u.id);
+    }
     const raw = localStorage.getItem("booknest-user");
-    if (!raw) return 1; // demo customer for AI personalization
+    if (!raw) return null;
     const u = JSON.parse(raw);
-    return Number(u.id || u.customer_id) || 1;
+    return Number(u.id || u.customer_id) || null;
   } catch {
-    return 1;
+    return null;
   }
 }
 
-function loadMembership(): string {
+function loadMembership(): string | null {
   try {
+    const auth = localStorage.getItem("booknest-auth-v1");
+    if (auth) {
+      const p = JSON.parse(auth);
+      if (p?.state?.user) return "standard";
+    }
     const raw = localStorage.getItem("booknest-user");
-    if (!raw) return "gold";
+    if (!raw) return null;
     const u = JSON.parse(raw);
-    return u.membership || u.tier || "gold";
+    return u.membership || u.tier || null;
   } catch {
-    return "gold";
+    return null;
   }
 }
 

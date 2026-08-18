@@ -240,10 +240,14 @@
   }
 
   function fmtMoney(n, currency) {
-    if (currency === "VND" || (!currency && n > 1000)) {
-      return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(n);
+    const v = Number(n) || 0;
+    // Store truth is already VND for vi books; don't multiply ratio 24000 again.
+    // Widget's scrape path may see small USD numbers; heuristic handles both scales.
+    const isVnd = currency === "VND" || (!currency && v > 1000);
+    if (isVnd) {
+      return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(v);
     }
-    return "$" + Number(n).toFixed(2);
+    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(Math.round(v * 24000));
   }
 
   function addMsg(role, html) {

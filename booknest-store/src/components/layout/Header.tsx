@@ -16,6 +16,7 @@ import { SearchBar } from "./SearchBar";
 import { useCart } from "@/store/cart";
 import { useWishlist } from "@/store/wishlist";
 import { useCatalog } from "@/store/catalog";
+import { useAuth } from "@/store/auth";
 import { cn } from "@/lib/utils";
 
 export function Header() {
@@ -24,6 +25,8 @@ export function Header() {
   const cartCount = useCart((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const wishCount = useWishlist((s) => s.ids.length);
   const isAdmin = useCatalog((s) => s.isAdmin);
+  const isAuthenticated = useAuth((s) => s.isAuthenticated);
+  const user = useAuth((s) => s.user);
 
   return (
     <header className="sticky top-0 z-50 pt-4">
@@ -109,11 +112,11 @@ export function Header() {
             )}
           </Link>
           <Link
-            href="/account"
+            href={isAuthenticated ? "/account" : "/login"}
             className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-semibold text-white/90 transition hover:border-primary/40 hover:bg-primary/15 sm:flex"
           >
             <User className="h-4 w-4 text-primary" />
-            Tài khoản
+            {isAuthenticated && user ? user.name.split(" ")[0] : "Tài khoản"}
           </Link>
           <Link
             href="/admin"

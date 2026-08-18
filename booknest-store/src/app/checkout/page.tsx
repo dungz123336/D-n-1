@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/store/cart";
+import { useAuth } from "@/store/auth";
 import { formatVND } from "@/lib/utils";
 import { readBookById } from "@/store/catalog";
 
@@ -19,6 +20,7 @@ const payments = [
 ];
 
 export default function CheckoutPage() {
+  const { isAuthenticated } = useAuth();
   const { items, subtotal, discountAmount, shipping, total, clear, coupon, paymentMethod, setPaymentMethod, couponMessage } =
     useCart();
   const [form, setForm] = useState({ name: "", phone: "", address: "", email: "", note: "" });
@@ -62,6 +64,14 @@ export default function CheckoutPage() {
   return (
     <div className="py-10">
       <h1 className="section-title text-3xl">Thanh toán</h1>
+      {!isAuthenticated && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm">
+          <span className="text-amber-100">Bạn chưa đăng nhập — đơn sẽ chỉ lưu trên thiết bị này.</span>
+          <Link href="/login?next=/checkout" className="font-bold text-primary hover:text-highlight">
+            Đăng nhập →
+          </Link>
+        </div>
+      )}
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
         <form
           className="glass space-y-4 rounded-[24px] p-6 lg:col-span-2"
