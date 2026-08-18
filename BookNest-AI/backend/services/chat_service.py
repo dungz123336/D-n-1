@@ -41,11 +41,21 @@ class ChatService:
         self.promos = PromotionEngine(db)
         self.llm = get_llm_provider()
 
+    BOOK_DISPLAY_INTENTS = {"recommend", "search", "budget", "cart", "compare", "roadmap", "summary", "quiz", "barcode"}
+
+    @staticmethod
+    def _filter_vi_cheap(books: list[dict], limit: int = 5) -> list[dict]:
+        """Keep only Vietnamese books, sorted cheapest first."""
+        vi = [b for b in books if (b.get("language") or "vi").lower() == "vi"]
+        pool = vi if vi else books
+        pool = sorted(pool, key=lambda b: float(b.get("price") or b.get("sale_price") or 1e9))
+        return pool[:limit]
+
     @staticmethod
     def _match_website_inventory(
         query: str, inventory: list, limit: int = 6
     ) -> list[dict]:
-        """Score website books by title/author/category keywords; keep real stock."""
+        """Score website books by title/author/category keywords; keep real stock. Prefer vi + cheap."""
         if not inventory or not query:
             return []
         q = query.lower()
@@ -69,24 +79,32 @@ class ChatService:
             for t in tokens:
                 if t in blob:
                     score += 2
-            # boost in-stock
+            # prefer Vietnamese & in-stock & cheap
+            lang = (b.get("language") or "vi").lower()
+            if lang == "vi":
+                score += 1.0
             stock = int(b.get("stock") or 0)
             if stock > 0:
                 score += 0.5
             else:
                 score -= 1
+            price = float(b.get("sale_price") or b.get("price") or 1e9)
+            score += max(0, (300000 - price) / 100000) * 0.3  # cheap boost
             if score > 0:
                 scored.append((score, b))
         scored.sort(key=lambda x: x[0], reverse=True)
         out = []
-        for _, b in scored[:limit]:
+        for _, b in scored[: limit * 2]:
             row = dict(b)
-            # normalize for frontend cards
             row.setdefault("author_name", b.get("author"))
             row.setdefault("price", b.get("sale_price") or b.get("price"))
             row["currency"] = "VND"
             out.append(row)
-        return out
+        # final: keep vi first, then cheap
+        vi = [r for r in out if (r.get("language") or "vi").lower() == "vi"]
+        pool = vi if vi else out
+        pool = sorted(pool, key=lambda b: float(b.get("price") or b.get("sale_price") or 1e9))
+        return pool[:limit]
 
     @staticmethod
     def _strip_accents(text: str) -> str:
@@ -423,37 +441,49 @@ class ChatService:
                     LLMMessage(role="system", content=f"Khuyến mãi realtime:\n{promos}")
                 )
             elif intent in ("search", "budget", "recommend"):
-                # Prefer website inventory for matching (real stock)
                 inv = (session.context or {}).get("website_inventory") or []
                 web_hits = self._match_website_inventory(req.message, inv, limit=6)
                 if web_hits:
-                    books_payload = web_hits
+                    books_payload = self._filter_vi_cheap(web_hits, limit=5)
                     stock_lines = "\n".join(
-                        f"- {b.get('title')}: stock={b.get('stock')} "
+                        f"- {b.get('title')} ({b.get('language') or 'vi'}): stock={b.get('stock')} "
                         f"({'CÒN HÀNG' if int(b.get('stock') or 0) > 0 else 'HẾT HÀNG'}), "
                         f"giá={b.get('sale_price') or b.get('price')}đ"
-                        for b in web_hits
+                        for b in books_payload
                     )
                     messages.append(
                         LLMMessage(
                             role="system",
                             content=(
-                                "Sách khớp từ WEBSITE (dùng stock/giá này, không nói hết nếu stock>0):\n"
+                                "Sách khớp từ WEBSITE — CHỈ gợi ý sách tiếng Việt giá rẻ trong list này (đã sắp xếp rẻ trước):\n"
                                 + stock_lines
                             ),
                         )
                     )
                 else:
                     smart = await self.smart.recommend(
-                        req.message, customer_id=session.customer_id, limit=5
+                        req.message, customer_id=session.customer_id, limit=10
                     )
-                    books_payload = smart.get("books")
-                    messages.append(
-                        LLMMessage(
-                            role="system",
-                            content="Gợi ý thông minh (đã chấm điểm):\n" + (smart.get("message") or ""),
+                    raw = smart.get("books") or []
+                    books_payload = self._filter_vi_cheap(raw, limit=5)
+                    if books_payload:
+                        cheap_lines = "\n".join(
+                            f"- {b.get('title')} ({b.get('language') or 'vi'}): {b.get('price')} VND | stock={b.get('stock')}"
+                            for b in books_payload
                         )
-                    )
+                        messages.append(
+                            LLMMessage(
+                                role="system",
+                                content="Gợi ý tiếng Việt giá rẻ (đã lọc + sắp xếp rẻ trước, dùng list này):\n" + cheap_lines,
+                            )
+                        )
+                    else:
+                        messages.append(
+                            LLMMessage(
+                                role="system",
+                                content="Gợi ý thông minh (đã chấm điểm):\n" + (smart.get("message") or ""),
+                            )
+                        )
             elif intent == "barcode":
                 codes = re.findall(r"\d{10,13}", req.message)
                 if codes:
@@ -497,9 +527,10 @@ class ChatService:
             )
 
             if intent == "recommend" and not books_payload:
-                books_payload = await self.store.recommend_for_user(
-                    customer_id=session.customer_id, limit=3
+                rec = await self.store.recommend_for_user(
+                    customer_id=session.customer_id, limit=10
                 )
+                books_payload = self._filter_vi_cheap(rec, limit=5) or None
                 self.db.add(
                     Recommendation(
                         customer_id=session.customer_id,
@@ -511,6 +542,10 @@ class ChatService:
                 await self.db.flush()
 
             actions = self._build_actions(intent, context, session)
+
+            # Only show book cards when customer actually asked for books
+            if intent not in self.BOOK_DISPLAY_INTENTS:
+                books_payload = None
 
             return ChatResponse(
                 session_id=session.session_key,

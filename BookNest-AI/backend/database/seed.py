@@ -90,6 +90,49 @@ async def seed_if_empty(session: AsyncSession) -> None:
             difficulty="intermediate", target_reader="Readers of Sapiens", page_count=449,
             published_year=2015, tags=["future", "technology"],
         ),
+        # --- Vietnamese affordable books (so cheap-vi filter always has choices) ---
+        Book(
+            isbn="9786041111111", barcode="9786041111111", title="Đắc Nhân Tâm",
+            description="Nghệ thuật thu phục lòng người — bản dịch tiếng Việt.",
+            author_id=authors[3].id, category="Self-Help", genres=["self-help", "psychology"], language="vi",
+            format="paperback", price=3.20, stock=180, rating=4.8, review_count=80000,
+            difficulty="beginner", target_reader="Mọi độc giả", page_count=320, published_year=2016, tags=["vietnam", "bestseller", "cheap"],
+        ),
+        Book(
+            isbn="9786041111112", barcode="9786041111112", title="Nhà Giả Kim",
+            description="Hành trình theo đuổi vận mệnh của cậu bé chăn cừu.",
+            author_id=authors[3].id, category="Fiction", genres=["philosophy", "adventure"], language="vi",
+            format="paperback", price=2.90, stock=150, rating=4.7, review_count=60000,
+            difficulty="beginner", target_reader="Mọi độc giả", page_count=200, published_year=2014, tags=["vietnam", "classic", "cheap"],
+        ),
+        Book(
+            isbn="9786041111113", barcode="9786041111113", title="Tuổi Trẻ Đáng Giá Bao Nhiêu",
+            description="Những chia sẻ truyền cảm hứng cho người trẻ.",
+            author_id=authors[3].id, category="Self-Help", genres=["self-help", "youth"], language="vi",
+            format="paperback", price=3.50, stock=160, rating=4.6, review_count=45000,
+            difficulty="beginner", target_reader="Giới trẻ", page_count=280, published_year=2018, tags=["vietnam", "cheap"],
+        ),
+        Book(
+            isbn="9786041111114", barcode="9786041111114", title="Cà Phê Cùng Tony",
+            description="Tập hợp những câu chuyện ngắn hài hước và ý nghĩa.",
+            author_id=authors[3].id, category="Self-Help", genres=["humor", "life"], language="vi",
+            format="paperback", price=3.00, stock=140, rating=4.5, review_count=35000,
+            difficulty="beginner", target_reader="Giới trẻ", page_count=260, published_year=2015, tags=["vietnam", "cheap"],
+        ),
+        Book(
+            isbn="9786041111115", barcode="9786041111115", title="Rèn Luyện Tư Duy Phản Biện",
+            description="Phương pháp tư duy phản biện cho học tập và công việc.",
+            author_id=authors[3].id, category="Non-Fiction", genres=["education", "thinking"], language="vi",
+            format="paperback", price=4.10, stock=120, rating=4.6, review_count=28000,
+            difficulty="beginner", target_reader="Sinh viên, người đi làm", page_count=320, published_year=2020, tags=["vietnam", "cheap"],
+        ),
+        Book(
+            isbn="9786041111116", barcode="9786041111116", title="Muôn Kiếp Nhân Sinh",
+            description="Những câu chuyện luân hồi và nhân quả.",
+            author_id=authors[3].id, category="Non-Fiction", genres=["spiritual", "philosophy"], language="vi",
+            format="paperback", price=4.50, stock=100, rating=4.7, review_count=50000,
+            difficulty="beginner", target_reader="Mọi độc giả", page_count=400, published_year=2020, tags=["vietnam", "bestseller", "cheap"],
+        ),
     ]
     session.add_all(books)
     session.add_all(
@@ -178,6 +221,12 @@ async def seed_store_extensions(session: AsyncSession) -> None:
         "Murder on the Orient Express": (149000, 129000, False, False, True),
         "Norwegian Wood": (169000, 149000, False, True, False),
         "Homo Deus": (279000, 239000, False, True, False),
+        "Đắc Nhân Tâm": (89000, 69000, True, True, True),
+        "Nhà Giả Kim": (79000, 59000, True, True, True),
+        "Tuổi Trẻ Đáng Giá Bao Nhiêu": (86000, 65000, True, True, False),
+        "Cà Phê Cùng Tony": (82000, 62000, True, False, False),
+        "Rèn Luyện Tư Duy Phản Biện": (99000, 79000, True, True, False),
+        "Muôn Kiếp Nhân Sinh": (109000, 89000, True, True, True),
     }
     for b in books:
         prices = vnd_prices.get(b.title, (int(b.price * 24000), None, False, False, False))
